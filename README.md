@@ -1,0 +1,1 @@
+This project aim is store user video files and provide simple access and search through files metadata
