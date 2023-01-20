@@ -3,6 +3,7 @@ package pgdb
 import (
 	"github.com/jmoiron/sqlx"
 	"log"
+	"time"
 
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
@@ -26,13 +27,21 @@ func NewDatabase(dsn string) (db.DB, func() error, error) {
 	return &PGS{db: dbc}, dbc.Close, err
 }
 
-func (p *PGS) AddObject(obj models.StorageObject) error {
+func (p *PGS) AddObject(meta models.StorageObjectMeta) error {
 	q := `
-		INSERT INTO object (source_name, src_date, customer_pn, "user", addition)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO object (storage_name, orig_name, orig_date, add_date, billing_pn, user_name, notes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
-	_, err := p.db.Exec(q, obj.SourceName, obj.SrcDate, obj.CustomerPN, obj.User, obj.Addition)
+	_, err := p.db.Exec(q,
+		meta.StorageName,
+		meta.OrigName,
+		meta.OrigDate,
+		time.Now(),
+		meta.BillingPn,
+		meta.UserName,
+		meta.Notes,
+	)
 	if err != nil {
 		logrus.Errorf("Can`t create object record in db: %v\n", err)
 	}
@@ -40,14 +49,14 @@ func (p *PGS) AddObject(obj models.StorageObject) error {
 	return err
 }
 
-func (p *PGS) GetObjectByCustomerPN(customerPn string) (obj []models.StorageObject, err error) {
-	objList := make([]models.StorageObject, 0)
+func (p *PGS) GetObjectByBillingPN(billingPn string) (obj []models.StorageObjectMeta, err error) {
+	objList := make([]models.StorageObjectMeta, 0)
 	q := `
-		SELECT source_name, src_date, customer_pn, "user", addition
+		SELECT id, storage_name, orig_name, orig_date, add_date, billing_pn, user_name, notes
 		FROM object
-		WHERE customer_pn = $1
+		WHERE billing_pn = $1
 	`
-	rows, err := p.db.Query(q, customerPn)
+	rows, err := p.db.Query(q, billingPn)
 	if err != nil {
 		logrus.Errorf("Can`t get objects records in db: %v\n", err)
 		return objList, err
@@ -55,8 +64,12 @@ func (p *PGS) GetObjectByCustomerPN(customerPn string) (obj []models.StorageObje
 	defer rows.Close()
 
 	for rows.Next() {
-		o := models.StorageObject{}
-		err := rows.Scan(&o.SourceName, &o.SrcDate, &o.CustomerPN, &o.User, &o.Addition)
+		o := models.StorageObjectMeta{}
+		err := rows.Scan(
+			&o.Id, &o.StorageName, &o.OrigName,
+			&o.OrigDate, &o.AddDate, &o.BillingPn,
+			&o.UserName, &o.Notes,
+		)
 
 		if err != nil {
 			logrus.Errorf("Can`t get object record from rows: %v\n", err)

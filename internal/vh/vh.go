@@ -3,23 +3,37 @@ package vh
 import (
 	"context"
 	"vh/internal/db"
-	"vh/internal/image_storage"
 	"vh/internal/models"
+	"vh/internal/object_storage"
 )
 
 type Vh struct {
 	database db.DB
-	storage  image_storage.ImageStorage
+	storage  object_storage.ImageStorage
 }
 
-func NewVh(database db.DB, storage image_storage.ImageStorage) *Vh {
+func NewVh(database db.DB, storage object_storage.ImageStorage) *Vh {
 	return &Vh{database: database, storage: storage}
 }
 
-func (v *Vh) UploadVideo(ctx context.Context, img models.ImageUnit, obj models.StorageObject) error {
-	_, err := v.storage.UploadFile(ctx, img)
+func (v *Vh) UploadObject(ctx context.Context, obj models.StorageObjectUnit, objMeta models.StorageObjectMeta) error {
+	objMeta.StorageName = GenerateObjectName(objMeta.BillingPn, objMeta.OrigName)
+	_, err := v.storage.UploadFile(ctx, obj, objMeta.StorageName)
 
-	err = v.database.AddObject(obj)
+	err = v.database.AddObject(objMeta)
 
 	return err
+}
+
+func (v *Vh) GetObjectByBillingPn(billingPn string) ([]models.StorageObjectMeta, error) {
+	metaList, err := v.database.GetObjectByBillingPN(billingPn)
+	if err != nil {
+		return []models.StorageObjectMeta{}, err
+	}
+
+	return metaList, nil
+}
+
+func (v *Vh) GetContent(ctx context.Context, name string) (*models.StorageObjectUnit, error) {
+	return v.storage.DownloadFile(ctx, name)
 }

@@ -6,7 +6,7 @@ import (
 	"os"
 	"vh/internal/controllers"
 	pgdb "vh/internal/db/postgresql"
-	"vh/internal/image_storage/minio_provider"
+	"vh/internal/object_storage/minio_provider"
 	"vh/internal/vh"
 )
 

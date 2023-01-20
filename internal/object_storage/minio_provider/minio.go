@@ -5,18 +5,18 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"log"
-	"vh/internal/image_storage"
 	"vh/internal/models"
+	"vh/internal/object_storage"
 )
 
-var _ image_storage.ImageStorage = &MinioProvider{}
+var _ object_storage.ImageStorage = &MinioProvider{}
 
 type MinioProvider struct {
 	minioAuthData
 	client *minio.Client
 }
 
-func NewMinioProvider(minioUrl, minioUser, minioPassword string, ssl bool) (image_storage.ImageStorage, error) {
+func NewMinioProvider(minioUrl, minioUser, minioPassword string, ssl bool) (object_storage.ImageStorage, error) {
 	return &MinioProvider{
 		minioAuthData: minioAuthData{
 			url:      minioUrl,
@@ -45,11 +45,11 @@ func (m *MinioProvider) Connect() error {
 	return err
 }
 
-func (m *MinioProvider) UploadFile(ctx context.Context, img models.ImageUnit) (string, error) {
+func (m *MinioProvider) UploadFile(ctx context.Context, img models.StorageObjectUnit, name string) (string, error) {
 	uploadInfo, err := m.client.PutObject(
 		ctx,
 		"videohosting",
-		img.PayloadName,
+		name,
 		img.Payload,
 		img.PayloadSize,
 		minio.PutObjectOptions{ContentType: "video/mp4"},
@@ -61,11 +61,11 @@ func (m *MinioProvider) UploadFile(ctx context.Context, img models.ImageUnit) (s
 	return uploadInfo.Location, err
 }
 
-func (m *MinioProvider) DownloadFile(ctx context.Context, imgId string) (*models.ImageUnit, error) {
+func (m *MinioProvider) DownloadFile(ctx context.Context, objId string) (*models.StorageObjectUnit, error) {
 	reader, err := m.client.GetObject(
 		ctx,
-		"video_hosting",
-		imgId,
+		"videohosting",
+		objId,
 		minio.GetObjectOptions{},
 	)
 
@@ -73,10 +73,10 @@ func (m *MinioProvider) DownloadFile(ctx context.Context, imgId string) (*models
 		log.Fatal(err)
 	}
 
-	defer reader.Close()
+	//defer reader.Close()
 
-	return &models.ImageUnit{
-		PayloadName: imgId,
+	return &models.StorageObjectUnit{
+		PayloadName: objId,
 		Payload:     reader,
 	}, err
 }
