@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	"io"
 	"log"
 	"net/http"
 	"time"
@@ -99,8 +98,8 @@ func (s *Server) getObjectByBillingPn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(objListByte)
 	w.WriteHeader(http.StatusOK)
+	w.Write(objListByte)
 }
 
 func (s *Server) getContent(w http.ResponseWriter, r *http.Request) {
@@ -118,8 +117,9 @@ func (s *Server) getContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "video/mp4")
-	if _, err := io.Copy(w, objContent.Payload); err != nil {
-		logrus.Errorf("Cant send object: %v\n", err)
-		http.Error(w, "Can`t download object!", http.StatusInternalServerError)
-	}
+	http.ServeContent(w, r, objContent.PayloadName, time.Now(), objContent.Payload)
+	//if _, err := io.Copy(w, objContent.Payload); err != nil {
+	//	logrus.Errorf("Cant send object: %v\n", err)
+	//	http.Error(w, "Can`t download object!", http.StatusInternalServerError)
+	//}
 }
