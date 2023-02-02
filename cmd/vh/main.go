@@ -8,6 +8,8 @@ import (
 	pgdb "vh/internal/db/postgresql"
 	"vh/internal/object_storage/minio_provider"
 	"vh/internal/vh"
+	"vh/package/cache/freecache"
+	"vh/package/jwt"
 )
 
 func main() {
@@ -38,7 +40,10 @@ func main() {
 
 	core := vh.NewVh(db, fileStorage)
 
-	srv := controllers.NewServer(core)
+	cache := freecache.NewCacheRepo(10)
+	jwtHelper := jwt.NewHelper(cache)
+
+	srv := controllers.NewServer(core, jwtHelper)
 
 	err = srv.Run(os.Getenv("SERVERPORT"))
 

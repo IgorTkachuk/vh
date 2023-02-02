@@ -11,6 +11,10 @@ require (
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/coocood/freecache v1.2.3 // indirect
+	github.com/cristalhq/jwt v1.2.0 // indirect
+	github.com/cristalhq/jwt/v3 v3.1.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
