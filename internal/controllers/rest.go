@@ -10,22 +10,25 @@ import (
 	"time"
 	"vh/internal/models"
 	"vh/internal/vh"
+	"vh/package/jwt"
 )
 
 type Server struct {
-	core *vh.Vh
+	core      *vh.Vh
+	jwtHelper jwt.Helper
 }
 
-func NewServer(core *vh.Vh) *Server {
-	return &Server{core: core}
+func NewServer(core *vh.Vh, jwtHelper jwt.Helper) *Server {
+	return &Server{core: core, jwtHelper: jwtHelper}
 }
 
 func (s *Server) Run(port string) error {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/new", s.newObject)
-	router.HandleFunc("/getobjbypn", s.getObjectByBillingPn).Methods("GET")
+	router.HandleFunc("/getobjbypn", jwt.Middleware(s.getObjectByBillingPn)).Methods("GET")
 	router.HandleFunc("/content/{billing_pn}/{id}", s.getContent).Methods("GET")
+	router.HandleFunc("/auth", s.auth).Methods("POST", "PUT")
 
 	http.Handle("/", router)
 
@@ -122,4 +125,37 @@ func (s *Server) getContent(w http.ResponseWriter, r *http.Request) {
 	//	logrus.Errorf("Cant send object: %v\n", err)
 	//	http.Error(w, "Can`t download object!", http.StatusInternalServerError)
 	//}
+}
+
+func (s *Server) auth(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	var tokens []byte
+	var err error
+
+	switch r.Method {
+	case http.MethodPost:
+		var userDto models.UserDto
+		if err = json.NewDecoder(r.Body).Decode(&userDto); err != nil {
+			http.Error(w, "Authorization has been refused for those credentials", http.StatusUnauthorized)
+		}
+
+		tokens, err = s.jwtHelper.GenerateAccessToken(userDto)
+		if err != nil {
+			http.Error(w, "Error due generate tokens", http.StatusUnauthorized)
+		}
+	case http.MethodPut:
+		var rt jwt.RT
+		if err = json.NewDecoder(r.Body).Decode(&rt); err != nil {
+			http.Error(w, "Error during decoding received refresh token", http.StatusUnauthorized)
+		}
+		tokens, err = s.jwtHelper.UpdateRefreshToken(rt)
+		if err != nil {
+			http.Error(w, "Error due generate tokens", http.StatusUnauthorized)
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(tokens)
 }
