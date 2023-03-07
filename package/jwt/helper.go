@@ -23,8 +23,8 @@ type UserClaims struct {
 }
 
 type Helper interface {
-	GenerateAccessToken(u models.UserDto) ([]byte, error)
-	UpdateRefreshToken(rt RT) ([]byte, error)
+	GenerateAccessToken(u models.UserDto) (map[string]string, error)
+	UpdateRefreshToken(rt RT) (map[string]string, error)
 }
 
 type helper struct {
@@ -35,7 +35,7 @@ func NewHelper(cache cache.Repository) *helper {
 	return &helper{RTCache: cache}
 }
 
-func (h helper) GenerateAccessToken(u models.UserDto) ([]byte, error) {
+func (h helper) GenerateAccessToken(u models.UserDto) (map[string]string, error) {
 	fmt.Printf("Create token for user %s\n", u.Login)
 	secret := os.Getenv("JWT_SECRET")
 	signer, err := jwt.NewSignerHS(jwt.HS256, []byte(secret))
@@ -66,19 +66,24 @@ func (h helper) GenerateAccessToken(u models.UserDto) ([]byte, error) {
 		return nil, err
 	}
 
-	tokensBytes, err := json.Marshal(map[string]string{
+	tokens := map[string]string{
 		"token":         token.String(),
 		"refresh_token": refreshTokenUUID.String(),
-	})
+	}
+
+	//tokensBytes, err := json.Marshal(map[string]string{
+	//	"token":         token.String(),
+	//	"refresh_token": refreshTokenUUID.String(),
+	//})
 
 	if err != nil {
 		return nil, err
 	}
 
-	return tokensBytes, nil
+	return tokens, nil
 }
 
-func (h helper) UpdateRefreshToken(rt RT) ([]byte, error) {
+func (h helper) UpdateRefreshToken(rt RT) (map[string]string, error) {
 	defer h.RTCache.Del([]byte(rt.RefreshToken))
 
 	userBytes, err := h.RTCache.Get([]byte(rt.RefreshToken))

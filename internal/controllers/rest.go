@@ -130,7 +130,7 @@ func (s *Server) getContent(w http.ResponseWriter, r *http.Request) {
 func (s *Server) auth(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	var tokens []byte
+	var tokens map[string]string
 	var err error
 
 	switch r.Method {
@@ -146,9 +146,19 @@ func (s *Server) auth(w http.ResponseWriter, r *http.Request) {
 		}
 	case http.MethodPut:
 		var rt jwt.RT
-		if err = json.NewDecoder(r.Body).Decode(&rt); err != nil {
+
+		cookie, err := r.Cookie("token")
+		if err != nil {
 			http.Error(w, "Error during decoding received refresh token", http.StatusUnauthorized)
 		}
+
+		rt = jwt.RT{
+			RefreshToken: cookie.Value,
+		}
+
+		//if err = json.NewDecoder(r.Body).Decode(&rt); err != nil {
+		//	http.Error(w, "Error during decoding received refresh token", http.StatusUnauthorized)
+		//}
 		tokens, err = s.jwtHelper.UpdateRefreshToken(rt)
 		if err != nil {
 			http.Error(w, "Error due generate tokens", http.StatusUnauthorized)
@@ -156,6 +166,7 @@ func (s *Server) auth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Set-Cookie", fmt.Sprintf("token=%s; HttpOnly; Path=/auth", tokens["refresh_token"]))
 	w.WriteHeader(http.StatusOK)
-	w.Write(tokens)
+	w.Write([]byte(fmt.Sprintf("{\"token\": %s}", tokens["token"])))
 }
