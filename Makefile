@@ -1,6 +1,6 @@
 .PHONY: build
 build:
-	go build -v ./cmd/app/vh
+	go build -v ./cmd/vh
 
 .PHONY: migrate
 migrate:

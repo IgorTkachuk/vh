@@ -41,7 +41,7 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 		}
 
 		if valid := uc.IsValidAt(time.Now()); !valid {
-			unauthorized(w, err)
+			unauthorized(w, fmt.Errorf("access token is expired"))
 			return
 		}
 
@@ -51,6 +51,6 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 }
 
 func unauthorized(w http.ResponseWriter, err error) {
-	w.WriteHeader(http.StatusUnauthorized)
+	w.WriteHeader(http.StatusForbidden)
 	w.Write([]byte(err.Error()))
 }

@@ -37,3 +37,26 @@ func (v *Vh) GetObjectByBillingPn(billingPn string) ([]models.StorageObjectMeta,
 func (v *Vh) GetContent(ctx context.Context, name string) (*models.StorageObjectUnit, error) {
 	return v.storage.DownloadFile(ctx, name)
 }
+
+func (v *Vh) GetPresignedUrl(ctx context.Context, name string) (string, error) {
+	return v.storage.GetPresignedUrl(ctx, name)
+}
+
+func (v *Vh) RemoveObject(ctx context.Context, id int) error {
+	objName, err := v.database.GetStorageNameById(id)
+	if err != nil {
+		return err
+	}
+
+	err = v.storage.RemoveFile(ctx, objName)
+	if err != nil {
+		return err
+	}
+
+	err = v.database.RemoveObject(id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

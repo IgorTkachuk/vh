@@ -27,6 +27,39 @@ func NewDatabase(dsn string) (db.DB, func() error, error) {
 	return &PGS{db: dbc}, dbc.Close, err
 }
 
+func (p *PGS) GetStorageNameById(id int) (storageName string, err error) {
+	q := `
+		SELECT storage_name
+		FROM object
+		WHERE id = $1
+		LIMIT 1
+	`
+
+	row := p.db.QueryRow(q, id)
+
+	err = row.Scan(&storageName)
+
+	if err != nil {
+		logrus.Errorf("Can`t get storage name by it's id: %v\n", err)
+	}
+
+	return
+}
+
+func (p *PGS) RemoveObject(id int) error {
+	q := `
+		DELETE FROM object 
+		WHERE id=$1
+	`
+
+	_, err := p.db.Exec(q, id)
+	if err != nil {
+		logrus.Errorf("Can't remove object in DB: %v\n", err)
+	}
+
+	return err
+}
+
 func (p *PGS) AddObject(meta models.StorageObjectMeta) error {
 	q := `
 		INSERT INTO object (storage_name, orig_name, orig_date, add_date, billing_pn, user_name, notes)
